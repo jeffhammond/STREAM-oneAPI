@@ -48,6 +48,7 @@
 # include <sys/time.h>
 
 # include <CL/sycl.hpp>
+# include <iostream>
 
 /*-----------------------------------------------------------------------
  * INSTRUCTIONS:
@@ -208,6 +209,10 @@ main()
     {
 
     sycl::queue q(sycl::default_selector{}, sycl::property::queue::in_order{});
+    auto d = q.get_device();
+    auto p = d.get_platform();
+    std::cerr << "SYCL Platform: " << p.get_info<sycl::info::platform::name>() << std::endl;
+    std::cerr << "SYCL Device:   " << d.get_info<sycl::info::device::name>() << std::endl;
 
     STREAM_TYPE *a = sycl::malloc_shared<STREAM_TYPE>(STREAM_ARRAY_SIZE, q);
     STREAM_TYPE *b = sycl::malloc_shared<STREAM_TYPE>(STREAM_ARRAY_SIZE, q);
