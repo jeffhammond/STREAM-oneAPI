@@ -179,6 +179,8 @@
 #define STREAM_TYPE double
 #endif
 
+STREAM_TYPE *a, *b, *c;
+
 static double	avgtime[4] = {0}, maxtime[4] = {0},
 		mintime[4] = {FLT_MAX,FLT_MAX,FLT_MAX,FLT_MAX};
 
@@ -192,12 +194,12 @@ static double	bytes[4] = {
     };
 
 extern double mysecond();
-extern void checkSTREAMresults (STREAM_TYPE * a, STREAM_TYPE * b, STREAM_TYPE * c);
+extern void checkSTREAMresults ();
 #ifdef TUNED
-extern void tuned_STREAM_Copy(sycl::queue & q, STREAM_TYPE * a, STREAM_TYPE * c);
-extern void tuned_STREAM_Scale(sycl::queue & q, STREAM_TYPE scalar, STREAM_TYPE * b, STREAM_TYPE * c);
-extern void tuned_STREAM_Add(sycl::queue & q, STREAM_TYPE * a, STREAM_TYPE * b, STREAM_TYPE * c);
-extern void tuned_STREAM_Triad(sycl::queue & q, STREAM_TYPE scalar, STREAM_TYPE * a, STREAM_TYPE * b, STREAM_TYPE * c);
+extern void tuned_STREAM_Copy(sycl::queue & q);
+extern void tuned_STREAM_Scale(sycl::queue & q, STREAM_TYPE scalar);
+extern void tuned_STREAM_Add(sycl::queue & q);
+extern void tuned_STREAM_Triad(sycl::queue & q, STREAM_TYPE scalar);
 #endif
 #ifdef _OPENMP
 extern int omp_get_num_threads();
@@ -214,9 +216,9 @@ main()
     std::cerr << "SYCL Platform: " << p.get_info<sycl::info::platform::name>() << std::endl;
     std::cerr << "SYCL Device:   " << d.get_info<sycl::info::device::name>() << std::endl;
 
-    STREAM_TYPE *a = sycl::malloc_shared<STREAM_TYPE>(STREAM_ARRAY_SIZE, q);
-    STREAM_TYPE *b = sycl::malloc_shared<STREAM_TYPE>(STREAM_ARRAY_SIZE, q);
-    STREAM_TYPE *c = sycl::malloc_shared<STREAM_TYPE>(STREAM_ARRAY_SIZE, q);
+    a = sycl::malloc_shared<STREAM_TYPE>(STREAM_ARRAY_SIZE, q);
+    b = sycl::malloc_shared<STREAM_TYPE>(STREAM_ARRAY_SIZE, q);
+    c = sycl::malloc_shared<STREAM_TYPE>(STREAM_ARRAY_SIZE, q);
 
     int			quantum;
     int			BytesPerWord;
@@ -319,7 +321,7 @@ main()
 	{
 	times[0][k] = mysecond();
 #ifdef TUNED
-        tuned_STREAM_Copy(q,a,c);
+        tuned_STREAM_Copy(q);
         q.wait();
 #else
 #pragma omp parallel for
@@ -330,7 +332,7 @@ main()
 
 	times[1][k] = mysecond();
 #ifdef TUNED
-        tuned_STREAM_Scale(q, scalar, b, c);
+        tuned_STREAM_Scale(q, scalar);
         q.wait();
 #else
 #pragma omp parallel for
@@ -341,7 +343,7 @@ main()
 
 	times[2][k] = mysecond();
 #ifdef TUNED
-        tuned_STREAM_Add(q,a,b,c);
+        tuned_STREAM_Add(q);
         q.wait();
 #else
 #pragma omp parallel for
@@ -352,7 +354,7 @@ main()
 
 	times[3][k] = mysecond();
 #ifdef TUNED
-        tuned_STREAM_Triad(q,scalar,a,b,c);
+        tuned_STREAM_Triad(q,scalar);
         q.wait();
 #else
 #pragma omp parallel for
@@ -387,7 +389,7 @@ main()
     printf(HLINE);
 
     /* --- Check Results --- */
-    checkSTREAMresults(a,b,c);
+    checkSTREAMresults ();
     printf(HLINE);
 
     sycl::free(c, q);
@@ -449,7 +451,7 @@ double mysecond()
 #ifndef abs
 #define abs(a) ((a) >= 0 ? (a) : -(a))
 #endif
-void checkSTREAMresults (STREAM_TYPE * a, STREAM_TYPE * b, STREAM_TYPE * c)
+void checkSTREAMresults()
 {
 	STREAM_TYPE aj,bj,cj,scalar;
 	STREAM_TYPE aSumErr,bSumErr,cSumErr;
@@ -569,33 +571,37 @@ void checkSTREAMresults (STREAM_TYPE * a, STREAM_TYPE * b, STREAM_TYPE * c)
 
 #ifdef TUNED
 /* stubs for "tuned" versions of the kernels */
-void tuned_STREAM_Copy(sycl::queue & q, STREAM_TYPE * a, STREAM_TYPE * c)
+void tuned_STREAM_Copy(sycl::queue & q)
 {
-    q.parallel_for(sycl::range{STREAM_ARRAY_SIZE}, [=](sycl::item<1> i) {
+    q.parallel_for(sycl::range{STREAM_ARRAY_SIZE}, [=,a=a,c=c](sycl::item<1> i) {
         const auto j = i[0];
         c[j] = a[j];
     });
 }
 
-void tuned_STREAM_Scale(sycl::queue & q, STREAM_TYPE scalar, STREAM_TYPE * b, STREAM_TYPE * c)
+void tuned_STREAM_Scale(sycl::queue & q, STREAM_TYPE scalar)
 {
-    q.parallel_for(sycl::range{STREAM_ARRAY_SIZE}, [=](sycl::item<1> i) {
+    q.parallel_for(sycl::range{STREAM_ARRAY_SIZE}, [=,b=b,c=c](sycl::item<1> i) {
         const auto j = i[0];
         b[j] = scalar*c[j];
     });
 }
 
-void tuned_STREAM_Add(sycl::queue & q, STREAM_TYPE * a, STREAM_TYPE * b, STREAM_TYPE * c)
+void tuned_STREAM_Add(sycl::queue & q)
 {
-    q.parallel_for(sycl::range{STREAM_ARRAY_SIZE}, [=](sycl::item<1> i) {
+    /* C++ does not allow lambda capture of globals */
+    double *A=a;
+    double *B=b;
+    double *C=c;
+    q.parallel_for(sycl::range{STREAM_ARRAY_SIZE}, [=,a=a,b=b,c=c](sycl::item<1> i) {
         const auto j = i[0];
         c[j] = a[j]+b[j];
     });
 }
 
-void tuned_STREAM_Triad(sycl::queue & q, STREAM_TYPE scalar, STREAM_TYPE * a, STREAM_TYPE * b, STREAM_TYPE * c)
+void tuned_STREAM_Triad(sycl::queue & q, STREAM_TYPE scalar)
 {
-    q.parallel_for(sycl::range{STREAM_ARRAY_SIZE}, [=](sycl::item<1> i) {
+    q.parallel_for(sycl::range{STREAM_ARRAY_SIZE}, [=,a=a,b=b,c=c](sycl::item<1> i) {
         const auto j = i[0];
         a[j] = b[j]+scalar*c[j];
     });
