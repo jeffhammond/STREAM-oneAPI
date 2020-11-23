@@ -1,5 +1,5 @@
 CXX = dpcpp
-CXXFLAGS = -O3 -fsycl -DTUNED -g3
+CXXFLAGS = -O3 -fsycl -DTUNED -DSTREAM_ARRAY_SIZE=134217728 -DNTIMES=20
 
 all: stream_sycl.exe
 
