@@ -196,21 +196,22 @@ static double	bytes[4] = {
 extern double mysecond();
 extern void checkSTREAMresults ();
 #ifdef TUNED
-extern void tuned_STREAM_Copy(sycl::queue & q);
-extern void tuned_STREAM_Scale(sycl::queue & q, STREAM_TYPE scalar);
-extern void tuned_STREAM_Add(sycl::queue & q);
-extern void tuned_STREAM_Triad(sycl::queue & q, STREAM_TYPE scalar);
+extern void tuned_STREAM_Copy();
+extern void tuned_STREAM_Scale(STREAM_TYPE scalar);
+extern void tuned_STREAM_Add();
+extern void tuned_STREAM_Triad(STREAM_TYPE scalar);
 #endif
 #ifdef _OPENMP
 extern int omp_get_num_threads();
 #endif
 int checktick();
 
+sycl::queue q;
+
 int
 main()
     {
-
-    sycl::queue q(sycl::default_selector{}, sycl::property::queue::in_order{});
+    q = sycl::default_selector{};
     auto d = q.get_device();
     auto p = d.get_platform();
     std::cerr << "SYCL Platform: " << p.get_info<sycl::info::platform::name>() << std::endl;
@@ -321,7 +322,7 @@ main()
 	{
 	times[0][k] = mysecond();
 #ifdef TUNED
-        tuned_STREAM_Copy(q);
+        tuned_STREAM_Copy();
         q.wait();
 #else
 #pragma omp parallel for
@@ -332,7 +333,7 @@ main()
 
 	times[1][k] = mysecond();
 #ifdef TUNED
-        tuned_STREAM_Scale(q, scalar);
+        tuned_STREAM_Scale(scalar);
         q.wait();
 #else
 #pragma omp parallel for
@@ -343,7 +344,7 @@ main()
 
 	times[2][k] = mysecond();
 #ifdef TUNED
-        tuned_STREAM_Add(q);
+        tuned_STREAM_Add();
         q.wait();
 #else
 #pragma omp parallel for
@@ -354,7 +355,7 @@ main()
 
 	times[3][k] = mysecond();
 #ifdef TUNED
-        tuned_STREAM_Triad(q,scalar);
+        tuned_STREAM_Triad(scalar);
         q.wait();
 #else
 #pragma omp parallel for
@@ -571,7 +572,7 @@ void checkSTREAMresults()
 
 #ifdef TUNED
 /* stubs for "tuned" versions of the kernels */
-void tuned_STREAM_Copy(sycl::queue & q)
+void tuned_STREAM_Copy()
 {
     q.parallel_for(sycl::range{STREAM_ARRAY_SIZE}, [=,a=a,c=c](sycl::item<1> i) {
         const auto j = i[0];
@@ -579,7 +580,7 @@ void tuned_STREAM_Copy(sycl::queue & q)
     });
 }
 
-void tuned_STREAM_Scale(sycl::queue & q, STREAM_TYPE scalar)
+void tuned_STREAM_Scale(STREAM_TYPE scalar)
 {
     q.parallel_for(sycl::range{STREAM_ARRAY_SIZE}, [=,b=b,c=c](sycl::item<1> i) {
         const auto j = i[0];
@@ -587,19 +588,15 @@ void tuned_STREAM_Scale(sycl::queue & q, STREAM_TYPE scalar)
     });
 }
 
-void tuned_STREAM_Add(sycl::queue & q)
+void tuned_STREAM_Add()
 {
-    /* C++ does not allow lambda capture of globals */
-    double *A=a;
-    double *B=b;
-    double *C=c;
     q.parallel_for(sycl::range{STREAM_ARRAY_SIZE}, [=,a=a,b=b,c=c](sycl::item<1> i) {
         const auto j = i[0];
         c[j] = a[j]+b[j];
     });
 }
 
-void tuned_STREAM_Triad(sycl::queue & q, STREAM_TYPE scalar)
+void tuned_STREAM_Triad(STREAM_TYPE scalar)
 {
     q.parallel_for(sycl::range{STREAM_ARRAY_SIZE}, [=,a=a,b=b,c=c](sycl::item<1> i) {
         const auto j = i[0];
