@@ -208,9 +208,8 @@ int checktick();
 
 sycl::queue q;
 
-int
-main()
-    {
+int main(void)
+{
     q = sycl::default_selector{};
     auto d = q.get_device();
     auto p = d.get_platform();
