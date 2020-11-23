@@ -185,8 +185,7 @@ static STREAM_TYPE	a[STREAM_ARRAY_SIZE+OFFSET],
 static double	avgtime[4] = {0}, maxtime[4] = {0},
 		mintime[4] = {FLT_MAX,FLT_MAX,FLT_MAX,FLT_MAX};
 
-static char	*label[4] = {"Copy:      ", "Scale:     ",
-    "Add:       ", "Triad:     "};
+static char	label[4][12] = {"Copy:      ", "Scale:     ", "Add:       ", "Triad:     "};
 
 static double	bytes[4] = {
     2 * sizeof(STREAM_TYPE) * STREAM_ARRAY_SIZE,
@@ -206,13 +205,15 @@ extern void tuned_STREAM_Triad(STREAM_TYPE scalar);
 #ifdef _OPENMP
 extern int omp_get_num_threads();
 #endif
+int checktick();
+
 int
 main()
     {
 
     sycl::queue q(sycl::default_selector{}, sycl::property::queue::in_order{});
 
-    int			quantum, checktick();
+    int			quantum;
     int			BytesPerWord;
     int			k;
     ssize_t		j;
