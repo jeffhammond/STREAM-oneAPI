@@ -47,6 +47,8 @@
 # include <limits.h>
 # include <sys/time.h>
 
+# include <CL/sycl.hpp>
+
 /*-----------------------------------------------------------------------
  * INSTRUCTIONS:
  *
@@ -207,6 +209,9 @@ extern int omp_get_num_threads();
 int
 main()
     {
+
+    sycl::queue q(sycl::default_selector{}, sycl::property::queue::in_order{});
+
     int			quantum, checktick();
     int			BytesPerWord;
     int			k;

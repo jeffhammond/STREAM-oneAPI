@@ -1,5 +1,5 @@
 CXX = dpcpp
-CXXFLAGS = -O3 -fsycl
+CXXFLAGS = -O3 -fsycl -DTUNED
 
 all: stream_sycl.exe
 
