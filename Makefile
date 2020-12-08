@@ -1,5 +1,13 @@
 CXX = dpcpp
-CXXFLAGS = -O3 -fsycl -DTUNED -DSTREAM_ARRAY_SIZE=134217728 -DNTIMES=20
+CXXFLAGS = -O3 -xHOST \
+	   -qopt-zmm-usage=low \
+           -fsycl \
+           -mcmodel=medium \
+           -shared-intel \
+           -DSTREAM_ARRAY_SIZE=134217728 \
+           -DOFFSET=0 \
+	   -DNTIMES=100 \
+           -DTUNED
 
 all: stream_sycl.exe
 
