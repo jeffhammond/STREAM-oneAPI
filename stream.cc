@@ -9,6 +9,7 @@
 /* computational kernels coded in C.                                     */
 /*-----------------------------------------------------------------------*/
 /* Copyright 1991-2013: John D. McCalpin                                 */
+/* Copyright 2020-2021: Intel Corporation (oneAPI modifications)         */
 /*-----------------------------------------------------------------------*/
 /* License:                                                              */
 /*  1. You are free to use this program and/or to redistribute           */
@@ -206,16 +207,26 @@ extern int omp_get_num_threads();
 #endif
 int checktick();
 
+/* oneAPI modifications: */
+/* This is a global variable to allow the tuned_* implementations
+ * to have the same function signature as the original version. */
 sycl::queue q;
 
 int main(void)
 {
+    /* oneAPI modifications: */
+    /* The default selector will likely choose a GPU, then a CPU.
+     * We print the platform (SYCL implementation) and device information
+     * so the user knows where they are running. */
     q = sycl::default_selector{};
     auto d = q.get_device();
     auto p = d.get_platform();
     std::cerr << "SYCL Platform: " << p.get_info<sycl::info::platform::name>() << std::endl;
     std::cerr << "SYCL Device:   " << d.get_info<sycl::info::device::name>() << std::endl;
 
+    /* oneAPI modifications: */
+    /* SYCL 2020 unified shared memory keeps the oneAPI implemenation as similar
+     * to the original version as possible. */
     a = sycl::malloc_shared<STREAM_TYPE>(STREAM_ARRAY_SIZE, q);
     b = sycl::malloc_shared<STREAM_TYPE>(STREAM_ARRAY_SIZE, q);
     c = sycl::malloc_shared<STREAM_TYPE>(STREAM_ARRAY_SIZE, q);
@@ -321,6 +332,8 @@ int main(void)
 	{
 	times[0][k] = mysecond();
 #ifdef TUNED
+        /* oneAPI modifications: */
+        /* SYCL kernels are asynchronous. We synchronize outside of the tuned implemenation. */
         tuned_STREAM_Copy();
         q.wait();
 #else
@@ -332,6 +345,8 @@ int main(void)
 
 	times[1][k] = mysecond();
 #ifdef TUNED
+        /* oneAPI modifications: */
+        /* SYCL kernels are asynchronous. We synchronize outside of the tuned implemenation. */
         tuned_STREAM_Scale(scalar);
         q.wait();
 #else
@@ -343,6 +358,8 @@ int main(void)
 
 	times[2][k] = mysecond();
 #ifdef TUNED
+        /* oneAPI modifications: */
+        /* SYCL kernels are asynchronous. We synchronize outside of the tuned implemenation. */
         tuned_STREAM_Add();
         q.wait();
 #else
@@ -354,6 +371,8 @@ int main(void)
 
 	times[3][k] = mysecond();
 #ifdef TUNED
+        /* oneAPI modifications: */
+        /* SYCL kernels are asynchronous. We synchronize outside of the tuned implemenation. */
         tuned_STREAM_Triad(scalar);
         q.wait();
 #else
@@ -376,6 +395,22 @@ int main(void)
 	    }
 	}
 
+    /* oneAPI modifications: */
+    /* This is here to increase the likelihood that someone running this code will
+     * comply with license term 3b, which requires the disclosure of the use of a
+     * tuned version of the benchmark when publishing results. */
+#ifdef TUNED
+    printf("*****  NOTICE: ******\n");
+    printf("Results based on modified source code or on runs not in\n");
+    printf("accordance with the STREAM Run Rules must be clearly labelled whenever they are published.\n");
+    printf("Examples of proper labelling include:\n");
+    printf("  \"tuned STREAM benchmark results\"\n");
+    printf("  \"based on a variant of the STREAM benchmark code\"\n");
+    printf("Other comparable, clear, and reasonable labelling is acceptable.\n");
+    printf("*****  NOTICE: ******\n");
+    printf(HLINE);
+#endif
+
     printf("Function    Best Rate MB/s  Avg time     Min time     Max time\n");
     for (j=0; j<4; j++) {
 		avgtime[j] = avgtime[j]/(double)(NTIMES-1);
@@ -392,6 +427,9 @@ int main(void)
     checkSTREAMresults ();
     printf(HLINE);
 
+    /* oneAPI modifications: */
+    /* SYCL 2020 unified shared memory keeps the oneAPI implemenation as similar
+     * to the original version as possible. */
     sycl::free(c, q);
     sycl::free(b, q);
     sycl::free(a, q);
@@ -568,6 +606,14 @@ void checkSTREAMresults()
 	printf ("    Rel Errors on a, b, c:     %e %e %e \n",abs(aAvgErr/aj),abs(bAvgErr/bj),abs(cAvgErr/cj));
 #endif
 }
+
+/* oneAPI modifications: */
+/* These are straightforward SYCL implementations of the STREAM kernels.
+ * Other implenentations may be better in some cases, e.g. using nd_range
+ * and prescibing the dimensions to be an integer multiple of a device parameter.
+ * Please see SYCL or oneAPI performance tuning documentation if necessary, */
+/* SYCL requires global variables to be captured explicitly, which is why there
+ * are a=a, b=b, c=c below.  This is odd, but consistent with how C++ lambdas work. */
 
 #ifdef TUNED
 /* stubs for "tuned" versions of the kernels */

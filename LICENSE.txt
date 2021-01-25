@@ -1,6 +1,7 @@
 *=======================================================================
 *-----------------------------------------------------------------------
 * Copyright 1991-2003: John D. McCalpin
+* Copyright 2020-2021: Intel Corporation (oneAPI modifications)
 *-----------------------------------------------------------------------
 * License:
 *  1. You are free to use this program and/or to redistribute
